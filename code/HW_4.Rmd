@@ -1,0 +1,150 @@
+---
+title: "PAII_HW4"
+author: "Garrett Eickelberg"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+opts_chunk$set(echo=FALSE)
+```
+
+
+ HW4_data.xls contains monthly airline passenger data from January 1949 through December 1960. For all of the plots in this question, include the past data along with any forecasts, if relevant.
+```{r, warning=FALSE, message=FALSE}
+library(readxl)
+library(magrittr)
+library(ggplot2)
+library(here)
+```
+
+```{r}
+data <- read_excel("~/Desktop/PhD_Misc/msia_PAII/HW4_data.xls", col_names =FALSE)
+```
+
+# q1
+(a) Use an appropriate moving average filter to smooth out the seasonality in the data.
+```{r}
+data
+##centered MA
+y<-ts(data, deltat =1/12)  
+m=12
+n=length(y)  
+MAchem<-filter(y, filter=rep(1/m,m), method = "convolution", sides = 2)
+plot(y,type="b")
+lines(MAchem,col="red")
+par(mfrow=c(1,1))
+```
+centered moving average with m= 12 to smooth out yearly seasonality. 
+
+
+(b) Calculate and plot EWMA forecasts for the next two years (1961 and 1962). What is the optimal EWMA parameter α? Discuss the nature of the k-step-ahead forecasts for this optimal α value.
+
+```{r}
+
+##let algorithm find optimal alpha and beta
+k=24;n=length(y)  #k = prediction horizon, for 2 years of monthlydata=24.
+Holtchem<-HoltWinters(y, seasonal = "additive", gamma = FALSE, beta=FALSE)  #double EWMA
+HoltchemPred<-predict(Holtchem, n.ahead=k, prediction.interval = T, level = 0.95)
+plot(Holtchem,HoltchemPred,type="b")#,ylim=c(16,18))
+Holtchem
+
+
+```
+
+ A higher $\alpha$ is akin to having a smaller m window on a moving average, meaning the past values are decaying more quickly, and in this case with $\alpha \approx1$ the influence of the prior window is based almost entirely on the previous value. 
+
+(c) Calculate and plot the Holt method forecasts for the next two years (1961 and
+1962). What optimal Holt parameters α and β? Discuss the nature of the k-step-ahead forecasts and how they differ from the EWMA forecasts in part (b).
+
+```{r}
+##let algorithm find optimal alpha and beta
+k=24;n=length(y)  #k = prediction horizon, for 2 years of monthlydata=24.
+Holtchem<-HoltWinters(y, seasonal = "additive", gamma = FALSE)  #double EWMA
+HoltchemPred<-predict(Holtchem, n.ahead=k, prediction.interval = T, level = 0.95)
+plot(Holtchem,HoltchemPred,type="b")#,ylim=c(16,18))
+Holtchem
+```
+
+By performing a double EWMA,  our forcasting results now follow the trend of past values, the extent to which past values influence the forcasted trend is determined by the value of $\beta$. As discussed above, a higher $\alpha$ is akin to having a smaller m window on a moving average, meaning the past values are decaying more quickly, and in this case with $\alpha =1$ the exponential weighted average is influenced entirely on the previous value. Similarly, the $beta$ value is a exponential decaying weight that accounts for trend, where a $\beta$ closer to 1 reduces influence of past values and increases influence on more recent values. In the above example, $\beta=0.003$, meaning past values have a high influence on the trend. 
+
+
+(d) Calculate and plot the Holt-Winters forecasts for the next two years (1961 and 1962) for an additive model. What optimal Holt-Winters parameters α, β, and γ?
+Interpret the seasonality coefficients.
+
+```{r}
+
+##let algorithm find optimal alpha and beta
+k=24;n=length(y)  #k = prediction horizon, for 2 years of monthlydata=24.
+HWtrade<-HoltWinters(y, seasonal = "additive") 
+HWtradePred<-predict(HWtrade, n.ahead=k, prediction.interval = T, level = 0.95)
+plot(HWtrade,HWtradePred,type="b")
+HWtrade
+```
+
+By performing a triple EWMA,  our forcasting results now model for the seasonality of past values, the extent to which past values influence the forcasted seasonality is determined by the value of $\gamma$.
+with $\gamma=1$, the influence of seasonality is determined by the seasonality value for the season immediately preceeding the currently forcasted season. As discussed above, a higher $\alpha$ is akin to having a smaller m window on a moving average, meaning the past values are decaying more quickly, and in this case with $\alpha =0.25$ the exponential weighted average is more heavily influenced by past values than part (b) and (c). Similarly, the $beta$ value is a exponential decaying weight that accounts for trend, where a $\beta$ closer to 1 reduces influence of past values and increases influence on more recent values. In the above example, $\beta=0.003$, meaning past values have a high influence on the trend (similar trend to that found in (c)). 
+
+(e) Repeat part (d) but for a Holt-Winters multiplicative model?
+```{r}
+##let algorithm find optimal alpha and beta
+k=24;n=length(y)  #k = prediction horizon, for 2 years of monthlydata=24.
+HWtrade<-HoltWinters(y, seasonal = "multiplicative") 
+HWtradePred<-predict(HWtrade, n.ahead=k, prediction.interval = T, level = 0.95)
+plot(HWtrade,HWtradePred,type="b")
+HWtrade
+```
+
+In the additive model, the k stepahead forcasted value is a product of $\hat y_{t+k|t}= L_t + kT_t +S_{t+k-s}$ whereas in the multiplicative model, the k stepahead forcasted value is a product of $\hat y_{t+k|t}= (L_t + k *T_t)S_{t+k-s}$. For the Multiplicative model, holtwinters algorithm found the optimal smoothing hyperparameters to be: (see above).
+
+These appear to be very similar to the additive model, except gamma has a slightly lower weight (seasonality is influenced more heavily by past seasons).
+ 
+
+(f) Which method do you think produces the most appropriate forecasts? Explain.
+
+When comparing the two model fits in part (d) and (e), the model in part e appears to overshoot the data as it fluctuates up and down, which would result in higher residuals. Given this I believe multiplicative model produces the most appropriate forcasts. I believe this is because a multiplicative model allows for the seasonality effect to change as the trend goes up overtime, which is not accounted for in the additive model.
+
+
+# q2: This problem pertains to the same airline passenger data that you analyzed in Problem 1.
+(a) Fit an additive decomposition model to the data. Interpret the trend and seasonality indices. Construct a plot of the original time series and the fitted values, both on the same plot. Discuss the extent to which the variability in the data are accounted for by the trend and seasonality.
+
+```{r}
+#trade<-read.csv("trade.csv",header=F)
+#y<-ts(trade[[1]], deltat=1/12)  #sampling interval corresponds to 1/12 the seasonality period
+k=24;n=length(y)  #k = prediction horizon
+Dectrade<-decompose(y, type = "additive") 
+plot(Dectrade,type="b")
+Dectrade
+##
+y_hat_add<-Dectrade$trend+Dectrade$seasonal
+plot(y,type="b")
+lines(y_hat_add,col="red")
+
+```
+
+For the additive decomposition model, the fitted values are accurate around for t=5 to approx t=8, however for the head and tail of the data the fit does not very accurately reflect the variability in the data. When comparing the trend and seasonal components to the observed data, it appears that the trend accurately models the upward trend of the observed data over time. However, with the additive model, the seasonality is assumed to stay constant over time, which appears to be violated in the data. 
+
+
+(b) Repeat for a multiplicative decomposition model. Which model – additive or multiplicative – do you think better represents the data?
+
+```{r}
+y<-ts(data, deltat =1/12)  
+
+k=24;n=length(y)  #k = prediction horizon
+Dectrade<-decompose(y, type = "multiplicative") 
+plot(Dectrade,type="b")
+Dectrade
+##
+y_hat_mul<-Dectrade$trend*Dectrade$seasonal#must change + to *
+plot(y,type="b")
+lines(y_hat_mul,col="red")
+
+```
+
+The multiplicative decomposition model appears to more accurately model the observed data, as seen by a drastically improved fit on the head and tail of the observed data when compared to the additive decomposition model. Multiplicative models allow for the magnitude of the seasonality changes over time to scale with an increasing trend overtime, which in our data allows for a better model fit. 
+
+
+# Code Apendix
+```{r, ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+
+```
