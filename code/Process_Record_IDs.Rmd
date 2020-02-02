@@ -1,0 +1,43 @@
+---
+title: "Process MIMIC Records"
+author: "Meg Hutch"
+date: "February 1, 2020"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+library(data.table)
+```
+
+Import Data
+
+```{r}
+# load mimicii waveform record ids
+ids <- read.delim2("C:/Users/User/Box Sync/Projects/Mimic_HSIP/Raw_Data/mimicii_matched_records.txt", header = FALSE)
+```
+
+Process data
+
+The actual record id is the number after s and before the first /
+```{r}
+# rename first column 
+colnames(ids)[1] <- "subject_id"
+
+# convert from factor to character
+ids$subject_id <- as.character(ids$subject_id)
+
+#crete new 'subject_id_wf' column for waveform
+ids$subject_id_wf <- ids$subject_id
+
+# Remove the s in front of the identifier
+ids$subject_id <- gsub('s', '', ids$subject_id)
+
+# remove time stamp 
+ids$subject_id <- gsub('/.*', '', ids$subject_id)
+```
+
+Save to txt file (csv removes leading 0s)
+```{r}
+fwrite(ids,"C:/Users/User/Box Sync/Projects/Mimic_HSIP/Processed_Data/mimicii_matched_records.txt", sep=";",col.names = FALSE, row.names = FALSE)
+```
