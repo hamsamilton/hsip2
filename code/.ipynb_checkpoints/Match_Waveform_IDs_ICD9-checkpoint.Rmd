@@ -1,0 +1,89 @@
+---
+title: "Match_Waveform_IDs_ICD9"
+author: "Meg Hutch"
+date: "February 2, 2020"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+```
+
+Import all mimic icd9 diagnoses
+```{r}
+# All mimiciii icd9 codes/ids
+icd <- read.csv("C:/Users/User/Box Sync/Projects/Mimic_HSIP/Mimic_Data/diagnoses_icd.csv")
+
+# mimic waveform ii ids
+wf_ids <- read.table(file = "C:/Users/User/Box Sync/Projects/Mimic_HSIP/Processed_Data/mimicii_matched_records.txt", sep = ";",colClasses = 'character')
+
+# change colnames - subject_id
+colnames(wf_ids) <- c("subject_id", "subject_id_wf") 
+```
+
+Identify icd ids that overlap with the wf_ids
+```{r}
+wf_icd_ids <- merge(wf_ids, icd, by = "subject_id")
+
+# keep only unique wf_icd_ids - the subject_id_wf is the timestamp of a unique waveform so for now, we do not need it!
+wf_icd_ids$subject_id_wf <- NULL
+
+# keep distinct rows
+wf_icd_ids <- wf_icd_ids %>% distinct
+```
+
+We have 1,763 unique record ids
+```{r}
+nrow(unique(data.frame(wf_icd_ids$subject_id)))
+```
+
+# Count number of ICD
+```{r}
+wf_icd_ids <- wf_icd_ids %>% group_by(icd9_code) %>% mutate(count_icd = n()) %>% arrange(desc(count_icd))
+
+# check unique icd9 counts
+icd_counts <- wf_icd_ids %>% select(icd9_code, count_icd) %>% distinct
+```
+
+Most Frequent ICD-9 counts - checked definition from google
+```{r}
+# 428.0: Congestive heart failure, unspecified; 1,198 patients
+
+# 401.9: Unspecified essential hypertension; 1,039 patients
+
+# 414.01: Atherosclerotic heart disease of native coronary artery without angina pectoris; 907 patients
+
+# 427.31: Atrial Fibrilation; 862
+
+# 584.9: Acute kidney failure, unspecified; 600 Patients
+
+# 250.00: Diabetes mellitus without mention of complication, type II or unspecified type, not stated as uncontrolled; 573 patients
+
+```
+
+Confirm definitions from the d_icd mimic table - they look to be matching my google search!
+```{r}
+d_icd <- read.csv("C:/Users/User/Box Sync/Projects/Mimic_HSIP/Mimic_Data/d_icd_diagnoses.csv")
+
+# select only columns of interest
+d_icd <- d_icd %>% select(icd9_code, short_title, long_title)
+
+# match with icd_counts
+icd_counts <- merge(d_icd, icd_counts, by = "icd9_code")
+
+icd_counts <- icd_counts %>% arrange(desc(count_icd))
+```
+
+If we are interested in the NOS, Congestive heart patients, we can subset the waveform ids as such
+```{r}
+wf_icd_ids_chf <- wf_icd_ids %>% filter(icd9_code == 4280)
+
+
+# Add back the wave form time stamps
+wf_icd_ids_chf_chf <- merge(wf_icd_ids_chf, wf_ids, by = "subject_id")
+```
+
+export to csv
+```{r}
+write.csv(wf_icd_ids_chf, "C:/Users/User/Box Sync/Projects/Mimic_HSIP/Processed_Data/wf_icd_ids_chf.csv", row.names = FALSE)
+```
