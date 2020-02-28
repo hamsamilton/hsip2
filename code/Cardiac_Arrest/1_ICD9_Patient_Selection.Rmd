@@ -1,0 +1,77 @@
+---
+title: "1_ICD9_Patient_Selection"
+author: "Meg Hutch"
+date: "February 27, 2020"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+```
+
+```{r}
+# All mimiciii icd9 codes/ids
+icd <- read.csv("C:/Users/User/Box Sync/Projects/Mimic_HSIP/Mimic_Data/diagnoses_icd.csv")
+
+# diagnosis definitions
+d_icd <- read.csv("C:/Users/User/Box Sync/Projects/Mimic_HSIP/Mimic_Data/d_icd_diagnoses.csv")
+
+# Import Admissions
+admissions <- read.csv("C:/Users/User/Box Sync/Projects/Mimic_HSIP/Mimic_Data/admissions.csv")
+
+# remove row.ids
+d_icd$row_id <- NULL
+icd$row_id <- NULL
+```
+
+Add the diagnosis definitions to the icd9 codes
+```{r}
+icd <- merge(icd, d_icd, by = "icd9_code")
+```
+
+Query patients with Cardiac Arrest & Create an ID dataframe
+```{r}
+ca <- icd %>% filter(icd9_code == "4275")
+nrow(unique(data.frame(ca$subject_id)))
+
+ca_ids <- ca %>% select(subject_id, hadm_id) %>% distinct
+```
+
+For patients who might have multiple cardiac arrests, link the hadm_ids to the admissions table in order to identify the first cardiac icd9 code occurence
+
+```{r}
+ca_admissions <- merge(ca_ids, admissions, by = c("subject_id", "hadm_id"))
+
+# convert admittime to posixct
+ca_admissions$admittime_conv<- strptime(as.character(ca_admissions$admittime), format = "%Y-%m-%d %H:%M:%S", tz = "EST")
+
+ca_admissions$admittime_conv <- as.POSIXct(ca_admissions$admittime_conv, tz="EST")
+
+# group by subject_id and arrange by date
+ca_admissions <- ca_admissions %>% group_by(subject_id) %>% arrange(admittime_conv) %>% slice(1L)
+```
+
+Modify the ca_ids df to contain the confirmed hospital admission with first icd9 code for ca
+```{r}
+ca_ids <- ca_admissions %>% select(subject_id, hadm_id) 
+```
+
+How many patients died -- nice, pretty balanced
+
+Note: Hospital_expire_flag indicates whether the patient died within the given hospitalization. 1 indicates death in the hospital, and 0 indicates survival to hospital discharge."
+```{r}
+table(ca_admissions$hospital_expire_flag)
+```
+
+Add the morality label to the ids
+```{r}
+mortality <- ca_admissions %>% select(subject_id, hospital_expire_flag)
+
+ca_ids <- merge(ca_ids, mortality, by = "subject_id")
+```
+
+
+Export final patient list for further database querying
+```{r}
+write.csv(ca_ids, file = "C:/Users/User/Box Sync/Projects/Mimic_HSIP/Mimic_Data/Cardiac_Arrest/ca_ids.csv", row.names = FALSE)
+```
