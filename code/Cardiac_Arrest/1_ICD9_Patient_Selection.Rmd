@@ -11,13 +11,13 @@ library(dplyr)
 
 ```{r}
 # All mimiciii icd9 codes/ids
-icd <- read.csv("C:/Users/User/Box Sync/Projects/Mimic_HSIP/Mimic_Data/diagnoses_icd.csv")
+icd <- read.csv("/Users/samuelhamilton/Downloads/Mimic_HSIP/Mimic_Data/diagnoses_icd.csv")
 
 # diagnosis definitions
-d_icd <- read.csv("C:/Users/User/Box Sync/Projects/Mimic_HSIP/Mimic_Data/d_icd_diagnoses.csv")
+d_icd <- read.csv("/Users/samuelhamilton/Downloads/Mimic_HSIP/Mimic_Data/d_icd_diagnoses.csv")
 
 # Import Admissions
-admissions <- read.csv("C:/Users/User/Box Sync/Projects/Mimic_HSIP/Mimic_Data/admissions.csv")
+admissions <- read.csv("/Users/samuelhamilton/Downloads/Mimic_HSIP/Mimic_Data/admissions.csv")
 
 # remove row.ids
 d_icd$row_id <- NULL
