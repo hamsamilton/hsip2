@@ -3,6 +3,7 @@ library(dplyr)
 library(lubridate)
 library(ggplot2)
 library(plyr)
+
 #Calculates entropy using sliding window approach
 CalcEnSlide <- function(entmeasure = "FastSampEn",df,grouplist,r_thrsh = .2,size = 200, step = 1) {
   
@@ -40,35 +41,34 @@ CalcEnSlide <- function(entmeasure = "FastSampEn",df,grouplist,r_thrsh = .2,size
 }
 
 
-# Heart Rate Data
-rr <- read.csv("/Users/samuelhamilton/Downloads/Mimic_HSIP/Mimic_Data/Cardiac_Arrest/Chartevents_618_rr.csv")
+# Data
+rr <- read.csv("/Users/User/Box Sync/Projects/Mimic_HSIP/Mimic_Data/Cardiac_Arrest/Chartevents_618_rr.csv")
 
 # Patient IDs
-ca_ids <- read.csv("/Users/samuelhamilton/Downloads/Mimic_HSIP/Mimic_Data/Cardiac_Arrest/ca_ids.csv")
+ca_ids <- read.csv("/Users/User/Box Sync/Projects/Mimic_HSIP/Mimic_Data/Cardiac_Arrest/ca_ids.csv")
 
+# Sample Size
 nrow(unique(data.frame(rr$subject_id)))
 nrow(unique(data.frame(rr$hadm_id))) # checking that there are unique admissions per patient - looks good!
 
+# Select patients with at least 200 observations 
 rr_counts <- rr %>% group_by(subject_id) %>% dplyr::count(num_obs = n())
-
-rr_counts_200 <- rr_counts %>% filter(num_obs >= 410)
-
+rr_counts_200 <- rr_counts %>% filter(num_obs > 200) #(specify num_obs > 200 to avoid error with the entropy function!)
 rr <- rr %>% filter(subject_id %in% rr_counts_200$subject_id)
+
 ## Data Pre-processing
 
-# CHF Patients
+#Format time
 rr$charttime_conv <- strptime(as.character(rr$charttime), format = "%Y-%m-%d %H:%M:%S", tz = "EST")
 rr$charttime_conv <- as.POSIXct(rr$charttime_conv, tz="EST")
 
+# Transform Value
 rr$value <- as.numeric(as.character(rr$value))
+
+# Combine physiologic data with subject ids
 rr = rr %>% inner_join(ca_ids, by = c("subject_id","hadm_id"))
 
 rr <- rr %>% filter(!value == "NULL")
-
-
-
-#Take the min, max, mean, and sd when measurements occur within the same time interval (if we want
-#rr <- rr %>% group_by(subject_id, charttime_conv) %>% mutate(max_rr = max(value, na.rm = TRUE)) %>% mutate(min_rr = min(value, na.rm = TRUE)) %>% mutate(mean_rr = mean(value, na.rm = TRUE)) %>% mutate(sd_rr = sd(value, na.rm = TRUE)) 
 
 ## Create time plots
 # x = subject_id
@@ -107,11 +107,14 @@ plot_rr <- function(x) {
   return(rr)
 }
 
+# arrange by time
+rr <- rr %>% group_by(subject_id) %>% arrange(charttime_conv)
 
 m <- CalcEnSlide(df = rr, 
                  grouplist = c("hospital_expire_flag","subject_id","hadm_id"), 
+                 size = 200,
                  step = 1,
-                 r_thrsh = .15)
+                 r_thrsh = .2)
 
 lm1 <- glm(hospital_expire_flag ~ entropy, family = "binomial", data = m)
 summary(lm1)
@@ -123,3 +126,33 @@ ggplot(m,aes(x = hospital_expire_flag, y = entropy, fill = hospital_expire_flag)
 
 plot_rr(20866) #high ent
 plot_rr(6469) # low entropy
+
+# Select the firest 200 measurements for each patients
+rr_200 <- rr %>% group_by(subject_id) %>% 
+  arrange(charttime_conv) %>% 
+  slice(1:200) 
+
+# check counts 
+View(rr_200 %>% group_by(subject_id) %>% dplyr::summarize(count = n()))
+nrow(unique(data.frame(rr_200$subject_id)))
+
+# Determine the max, min, mean, sd, and variance of the first 200 measurements
+library(dplyr) #reload, interferring with plyr
+rr_200 <- rr_200 %>% group_by(subject_id) %>% 
+  dplyr::mutate(min_rr = min(value, na.rm = TRUE)) %>% 
+  dplyr::mutate(max_rr = max(value, na.rm = TRUE)) %>% 
+  dplyr::mutate(mean_rr = mean(value, na.rm = TRUE)) %>%
+  dplyr::mutate(sd_rr = sd(value, na.rm = TRUE)) %>% 
+  dplyr::mutate(var_rr = var(value, na.rm = TRUE)) %>% 
+  select(subject_id, min_rr, max_rr, mean_rr, sd_rr, var_rr) %>%
+  slice(1L)
+
+# format entropy data
+m_ent <- m %>% select(subject_id, entropy)
+colnames(m_ent)[2] <- "entropy_rr"
+
+# add entropy + demographics
+rr_200 <- merge(rr_200, m_ent, by = "subject_id")
+
+# save as csv
+write.csv(rr_200, "/Users/User/Box Sync/Projects/Mimic_HSIP/Mimic_Data/Cardiac_Arrest/rr_200.csv")
