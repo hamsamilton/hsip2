@@ -126,7 +126,7 @@ ggplot(m,aes(x = hospital_expire_flag, y = entropy, fill = hospital_expire_flag)
   geom_point()
 
 plot_temp(16865) #high ent
-plot_temp(6469) # low entropy
+plot_temp(12245) # low entropy
 
 # Select the firest 200 measurements for each patients
 temp_200 <- temp %>% group_by(subject_id) %>% 
