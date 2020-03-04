@@ -68,6 +68,7 @@ rr$value <- as.numeric(as.character(rr$value))
 # Combine physiologic data with subject ids
 rr = rr %>% inner_join(ca_ids, by = c("subject_id","hadm_id"))
 
+# remove null values
 rr <- rr %>% filter(!value == "NULL")
 
 ## Create time plots
