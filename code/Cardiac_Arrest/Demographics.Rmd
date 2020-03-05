@@ -1,0 +1,93 @@
+---
+title: "Cardiac_Arrest_Demographics"
+author: "Meg Hutch"
+date: "March 4, 2020"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+```
+
+```{r}
+ca_ids <- read.csv("C:/Users/User/Box Sync/Projects/Mimic_HSIP/Mimic_Data/Cardiac_Arrest/ca_ids.csv")
+```
+
+Import Mimic Data
+```{r}
+admissions <- read.csv("C:/Users/User/Box Sync/Projects/Mimic_HSIP/Mimic_Data/admissions.csv")
+patients <- read.csv("C:/Users/User/Box Sync/Projects/Mimic_HSIP/Mimic_Data/patients.csv")
+icustays <- read.csv("C:/Users/User/Box Sync/Projects/Mimic_HSIP/Mimic_Data/icustays.csv")
+
+# remove unneccessary columns
+patients$row_id <- NULL
+admissions$row_id <- NULL
+icustays$row_id <- NULL
+```
+
+Determine Age of patients
+```{r}
+# Format date of birth
+patients$dob_conv <- strptime(as.character(patients$dob), format = "%Y-%m-%d %H:%M:%S", tz = "EST")
+patients$dob_conv <- as.POSIXct(patients$dob_conv, tz="EST")
+```
+
+Select DOB + Gender
+```{r}
+patients <- patients %>% select(subject_id, dob_conv, gender)
+```
+
+Merge dob with the hadm_admission date
+```{r}
+ca_ids <- merge(ca_ids, patients, by = "subject_id")
+```
+
+Format admissions dates similarly
+```{r}
+# convert admittime to posixct
+admissions$admittime_conv <- strptime(as.character(admissions$admittime), format = "%Y-%m-%d %H:%M:%S", tz = "EST")
+admissions$admittime_conv <- as.POSIXct(admissions$admittime_conv, tz="EST")
+
+admission_date <- admissions %>% select(subject_id, hadm_id, admittime_conv)
+```
+
+Add admission date to ca_ids
+```{r}
+ca_ids <- merge(ca_ids, admission_date, by = c("subject_id", "hadm_id")) 
+```
+
+Determine time difference from DOB to admit date
+```{r}
+# CHF
+ca_ids$Age <- difftime(ca_ids$dob_conv, ca_ids$admittime_conv, unit = "days")
+ca_ids$Age <- round(abs(ca_ids$Age/365))
+
+# convert > 300 to 90
+ca_ids$Age <- ifelse(ca_ids$Age >= 300, 90, ca_ids$Age)
+```
+
+Simple Descriptives
+```{r}
+# Gender
+table(ca_ids$gender)
+
+# Age
+mean(ca_ids$Age)
+sd(ca_ids$Age)
+```
+
+Final Clean up
+```{r}
+ca_ids <- ca_ids %>% select(subject_id, hospital_expire_flag, gender, Age)
+colnames(ca_ids)[2] <- "mortality"
+colnames(ca_ids)[4] <- "age"
+
+# refactor gender
+ca_ids$gender <- ifelse(ca_ids$gender == "M", 1, 0)
+```
+
+Export Demographics
+```{r}
+write.csv(ca_ids, "C:/Users/User/Box Sync/Projects/Mimic_HSIP/Mimic_Data/Cardiac_Arrest/ca_demographics.csv", row.names = FALSE)
+```
+
