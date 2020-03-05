@@ -12,7 +12,7 @@ ds <- full_join(demo_graphics, bp_200, by = "subject_id")
 ds <- full_join(ds, temp_200, by = "subject_id")
 ds <- full_join(ds, spo2_200, by = "subject_id")
 ds <- full_join(ds, rr_200, by = "subject_id")
-ds <- full_join(demo_graphics, hr_200, by = "subject_id")
+ds <- full_join(ds, hr_200, by = "subject_id")
 
 # export final datasets
 write.csv(ds, "/Users/User/Box Sync/Projects/Mimic_HSIP/Mimic_Data/Cardiac_Arrest/To_Analyze/vars_200.csv", row.names = FALSE)
