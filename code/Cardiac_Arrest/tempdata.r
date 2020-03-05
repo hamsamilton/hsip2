@@ -156,4 +156,4 @@ colnames(m_ent)[2] <- "entropy_temp"
 temp_200 <- merge(temp_200, m_ent, by = "subject_id")
 
 # save as csv
-write.csv(temp_200, "/Users/User/Box Sync/Projects/Mimic_HSIP/Mimic_Data/Cardiac_Arrest/Temp_200.csv")
+write.csv(temp_200, "/Users/User/Box Sync/Projects/Mimic_HSIP/Mimic_Data/Cardiac_Arrest/Temp_200.csv", row.names = FALSE)
