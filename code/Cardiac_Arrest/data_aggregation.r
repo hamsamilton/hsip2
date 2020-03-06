@@ -14,5 +14,12 @@ ds <- full_join(ds, spo2_200, by = "subject_id")
 ds <- full_join(ds, rr_200, by = "subject_id")
 ds <- full_join(ds, hr_200, by = "subject_id")
 
+# consider min temps below 93 as hypopthermic cooling
+ds$cooling <- ifelse(ds$min_temp <= 93, 1, 0)
+
+# full data
+ds_full <- na.omit(ds)
+table(ds_full$mortality)
+
 # export final datasets
 write.csv(ds, "/Users/User/Box Sync/Projects/Mimic_HSIP/Mimic_Data/Cardiac_Arrest/To_Analyze/vars_200.csv", row.names = FALSE)
