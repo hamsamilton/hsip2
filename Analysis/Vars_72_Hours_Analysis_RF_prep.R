@@ -48,7 +48,7 @@ round(table(mcTest$mortality)/33*100)
 
 # save training and testing sets
 write.csv(ds_no_temp, file = "C:/Users/User/Box Sync/Projects/Mimic_HSIP/To_Analyze/ds_no_temp_72.csv", row.names = FALSE)
-write.csv(ds_full, file = "C:/Users/User/Box Sync/Projects/Mimic_HSIP/To_Analyze/ds_full.csv_72", row.names = FALSE)
+write.csv(ds_full, file = "C:/Users/User/Box Sync/Projects/Mimic_HSIP/To_Analyze/ds_full_72.csv", row.names = FALSE)
 
 write.csv(mcTrain, file = "C:/Users/User/Box Sync/Projects/Mimic_HSIP/To_Analyze/mcTrain_no_temp_72.csv", row.names = FALSE)
 write.csv(mcTest, file = "C:/Users/User/Box Sync/Projects/Mimic_HSIP/To_Analyze/mcTest_no_temp_72.csv", row.names = FALSE)
