@@ -17,6 +17,13 @@ ds <- ds %>% select(-cooling, -min_temp, -mean_temp, -max_temp, -sd_temp,
 ds_full <- na.omit(ds)
 table(ds_full$mortality) # we can have up to 5 predictors 
 
+##########################################################################3
+# Univariate on each entropy predictor separately
+summary(glm(mortality ~ entropy_bp, family = "binomial", data = ds_full))
+summary(glm(mortality ~ entropy_hr, family = "binomial", data = ds_full))
+summary(glm(mortality ~ entropy_spo2, family = "binomial", data = ds_full))
+summary(glm(mortality ~ entropy_rr, family = "binomial", data = ds_full))
+
 #####################################################################
 ## Purposeful model selection; only patients with full data
 varList <- names(ds_full[, 3:28])
