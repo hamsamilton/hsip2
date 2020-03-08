@@ -9,6 +9,8 @@ library(ggplot2)
 
 ds <- read.csv("/Users/User/Box Sync/Projects/Mimic_HSIP/Mimic_Data/Cardiac_Arrest/To_Analyze/vars_72_Hours.csv")
 
+
+# For univariate do I need to make sure these are only the full data without any missing values?
 # Univariate Entropy
 lm1 <- glm(mortality ~ entropy_bp, family = "binomial", data = ds)
 summary(lm1)
@@ -22,10 +24,38 @@ summary(lm3)
 lm4 <- glm(mortality ~ entropy_hr, family = "binomial", data = ds)
 summary(lm4)
 
-# remove the outlier to avoid error message
 lm5 <- glm(mortality ~ entropy_spo2, family = "binomial", data = ds)
 summary(lm5)
 
+##############################################################
+#Univariate No missing values
+ds_full <- na.omit(ds)
+
+lm1 <- glm(mortality ~ entropy_bp, family = "binomial", data = ds_full)
+summary(lm1)
+
+lm2 <- glm(mortality ~ entropy_rr, family = "binomial", data = ds_full)
+summary(lm2)
+
+lm3 <- glm(mortality ~ entropy_temp, family = "binomial", data = ds_full)
+summary(lm3)
+
+lm4 <- glm(mortality ~ entropy_hr, family = "binomial", data = ds_full)
+summary(lm4)
+
+lm5 <- glm(mortality ~ entropy_spo2, family = "binomial", data = ds_full)
+summary(lm5)
+
+
+
+
+
+
+### Review all below as of March 8th, 2020 15:48 #####
+
+
+
+## Full Dataset
 # all entropy values
 lm6 <- glm(mortality ~ entropy_bp + entropy_rr + entropy_temp + 
              entropy_hr + entropy_spo2, family = "binomial", data = ds)
@@ -40,6 +70,14 @@ summary(lm7)
 lm7 <- glm(mortality ~ entropy_bp + entropy_rr + entropy_temp:cooling + 
              entropy_hr + entropy_spo2, family = "binomial", data = ds)
 summary(lm7)
+
+# add age + gender
+lm8 <- glm(mortality ~ entropy_bp + entropy_rr + entropy_temp:cooling + 
+             entropy_hr + entropy_spo2 + age + gender, family = "binomial", data = ds)
+summary(lm8)
+
+exp(-4.477683) # O.R = 0.01 ...low odds of mortality with higher bp entropy....?
+aggregate(entropy_bp ~ mortality, FUN = "median", data = ds) # median is slightlly higher for non-mortality group
 
 
 ## Entropy forward selection
@@ -57,16 +95,7 @@ lm1 <- glm(mortality ~ entropy_temp + entropy_bp, family = "binomial",
            data = ds_full)
 summary(lm1)
 
-# Forward selection without temp ??? - not working for me!
-fit0 <- lm(mortality ~ 1, data=ds)
-
-f.lower <- ~ 1
-f.upper <- ~ entropy_bp + entropy_rr + entropy_hr + entropy_spo2
-fit.stepF <- step(fit0, scope = f.upper, direction="forward")
-
-lm1 <- glm(mortality ~ entropy_spo2 + entropy_bp, family = "binomial", 
-           data = ds_full)
-summary(lm1)
+## odds ratio for temperature is huge!
 
 # Forward selection control for cooling
 ds_full <- na.omit(ds)
@@ -82,17 +111,21 @@ lm1 <- glm(mortality ~ entropy_temp + entropy_bp, family = "binomial",
 summary(lm1)
 
 
-## March 8th Note: Will need to rego through this for the 72 hours worht of data###
+## March 8th Note: Will need to rego through this for the 72 hours worth of data###
 #####################################################################
-## Purposeful model selection; only patients with full data
-varList <- names(ds_full[, 3:35])
+## Purposeful model selection
+## remove temperature columns
+ds <- ds %>% select(-entropy_temp, -cooling, -min_temp, -max_temp, -mean_temp, -sd_temp, 
+                    -var_temp)
+
+varList <- names(ds[, 3:28])
 
 ## Entropy forward selection
-ds_full <- na.omit(ds)
-table(ds_full$mortality)
+ds <- na.omit(ds)
+table(ds$mortality)
 
 # univariate analysis
-tab1 <- CreateTableOne(vars=varList, strata = "mortality", data=ds_full,)
+tab1 <- CreateTableOne(vars=varList, strata = "mortality", data=ds)
 print(tab1, showAllLevels = TRUE) 
 
 # Keep only variabels < 0.250 from univariate analysis
